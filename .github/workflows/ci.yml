@@ -150,8 +150,12 @@ jobs:
           # RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
           # REDIS_URL: redis://localhost:6379/0
         run: |
-          bin/rails db:prepare
-          bin/rails test:system
+          if ls test/system/**/*_test.rb test/system/*_test.rb >/dev/null 2>&1; then
+            bin/rails db:prepare
+            bin/rails test:system
+          else
+            echo "No system tests found in test/system, skipping test:system"
+          fi
 
       - name: Keep screenshots from failed system tests
         uses: actions/upload-artifact@v4
