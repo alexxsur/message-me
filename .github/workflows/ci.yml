@@ -109,7 +109,27 @@ jobs:
           bin/rails db:prepare
           bin/rails test
 
+  has-system-tests:
+    runs-on: ubuntu-latest
+    outputs:
+      has_tests: ${{ steps.detect.outputs.has_tests }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Detect system tests
+        id: detect
+        shell: bash
+        run: |
+          if find test/system -type f -name '*_test.rb' -print -quit 2>/dev/null | grep -q .; then
+            echo "has_tests=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_tests=false" >> "$GITHUB_OUTPUT"
+          fi
+
   system-test:
+    needs: has-system-tests
+    if: ${{ needs.has-system-tests.outputs.has_tests == 'true' }}
     runs-on: ubuntu-latest
 
     services:
@@ -150,12 +170,8 @@ jobs:
           # RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
           # REDIS_URL: redis://localhost:6379/0
         run: |
-          if ls test/system/**/*_test.rb test/system/*_test.rb >/dev/null 2>&1; then
-            bin/rails db:prepare
-            bin/rails test:system
-          else
-            echo "No system tests found in test/system, skipping test:system"
-          fi
+          bin/rails db:prepare
+          bin/rails test:system
 
       - name: Keep screenshots from failed system tests
         uses: actions/upload-artifact@v4
